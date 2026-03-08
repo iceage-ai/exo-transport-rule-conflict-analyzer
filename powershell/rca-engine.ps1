@@ -20,7 +20,7 @@ function New-RcaResult {
     AffectedUser      = $AffectedUser
     AffectedUserEmail = $AffectedUserEmail
     Category          = $Category
-    Confidence        = $Confidence
+    Confidence        = [math]::Round($Confidence,2)
     Reason            = $Reason
     Diagnostics       = $Diagnostics
     NextSteps         = $NextSteps
@@ -28,8 +28,6 @@ function New-RcaResult {
   }
 }
 
-# RULE-BASED ENGINE
-# Replace this mock signal input with real EXO cmdlet output for production use.
 $signals = @{
   MicrosoftDelayPct = 0.0
   ExternalDelayPct  = 0.0
@@ -39,49 +37,87 @@ $signals = @{
   RuleConflicts     = 0
 }
 
-if ($InputPath -and (Test-Path $InputPath)) {
-  $raw = Get-Content $InputPath -Raw
-  if ($raw.Trim().StartsWith("{")) {
-    $obj = $raw | ConvertFrom-Json
+try {
+  if ($InputPath) {
+    if (-not (Test-Path $InputPath)) { throw "Input file not found: $InputPath" }
+    $obj = Get-Content $InputPath -Raw | ConvertFrom-Json
     foreach ($k in $signals.Keys) {
       if ($obj.PSObject.Properties.Name -contains $k) { $signals[$k] = [double]$obj.$k }
     }
   }
-}
 
-# Decision logic placeholder (project-specific rules expected)
-if ($signals.MicrosoftDelayPct -ge 60) {
-  $result = New-RcaResult -Category "Microsoft-side processing" -Confidence 0.82 -Reason "Delay profile indicates majority of latency occurred inside EXO pipeline." -Diagnostics @(
-    "Inspect message trace detail internal hop durations",
-    "Correlate with Service Health incident timeline",
-    "Sample multiple Message IDs for consistency"
-  ) -NextSteps @(
-    "Open Microsoft support case with trace evidence pack",
-    "Attach UTC timeline and affected domains",
-    "Enable temporary SLA alert for >X minutes latency"
-  )
-}
-elseif ($signals.ExternalDelayPct -ge 60) {
-  $result = New-RcaResult -Category "Internet/remote domain" -Confidence 0.79 -Reason "Majority of latency is outside Microsoft handoff boundary." -Diagnostics @(
-    "Validate recipient MX and TLS endpoint responsiveness",
-    "Review remote deferral patterns and retry windows",
-    "Compare delays across destination domains"
-  ) -NextSteps @(
-    "Share evidence with recipient admin",
-    "Tune retry communications and user expectation",
-    "Track external domain delay as separate KPI"
-  )
-}
-else {
-  $result = New-RcaResult -Category "Configuration/policy interplay" -Confidence 0.67 -Reason "No dominant path latency; likely policy/rule/connector interaction." -Diagnostics @(
-    "Audit rule priority and stop-processing semantics",
-    "Validate connector scope/cert/domain alignment",
-    "Check auth/policy hit counters"
-  ) -NextSteps @(
-    "Run controlled before/after test with one variable change",
-    "Remove overlapping conditions and re-measure",
-    "Document final stable routing path"
-  )
-}
+  $result = $null
 
-if ($AsJson) { $result | ConvertTo-Json -Depth 6 } else { $result | Format-List }
+  if ($signals.AuthFailures -ge 3) {
+    $result = New-RcaResult -Category "Auth/identity path failure" -Confidence 0.86 -Reason "Authentication failures crossed threshold and likely drive incident." -Diagnostics @(
+      "Validate sign-in logs and protocol used",
+      "Check conditional access / MFA / legacy auth blocks",
+      "Confirm token/client freshness"
+    ) -NextSteps @(
+      "Move client path to modern auth only",
+      "Re-authenticate affected principal and retest",
+      "Create guardrail alert for repeated auth failures"
+    )
+  }
+  elseif ($signals.RuleConflicts -ge 1) {
+    $result = New-RcaResult -Category "Configuration/rule conflict" -Confidence 0.81 -Reason "Detected rule conflict signal; deterministic policy path is broken." -Diagnostics @(
+      "Export and sort rule priority",
+      "Inspect stop-processing and overlapping conditions",
+      "Run controlled A/B message path test"
+    ) -NextSteps @(
+      "Disable or reorder conflicting rule set",
+      "Re-test with same sample and compare latency/outcome",
+      "Document final intended rule precedence"
+    )
+  }
+  elseif ($signals.MicrosoftDelayPct -ge 60) {
+    $result = New-RcaResult -Category "Microsoft-side processing" -Confidence 0.82 -Reason "Majority of delay occurred inside EXO processing stages." -Diagnostics @(
+      "Correlate internal hop durations",
+      "Check service health timeline",
+      "Build evidence pack with UTC timestamps"
+    ) -NextSteps @(
+      "Open Microsoft support case with evidence",
+      "Track SLA breach window and affected domains",
+      "Enable temporary alerting for similar latency"
+    )
+  }
+  elseif ($signals.ExternalDelayPct -ge 60) {
+    $result = New-RcaResult -Category "External/Internet path" -Confidence 0.79 -Reason "Dominant delay is after Microsoft handoff." -Diagnostics @(
+      "Validate remote MX and TLS handshake timings",
+      "Review deferral/retry patterns",
+      "Compare latency by destination domain"
+    ) -NextSteps @(
+      "Share trace evidence with recipient admin",
+      "Tune retry expectations and communications",
+      "Separate external latency KPI from EXO processing KPI"
+    )
+  }
+  elseif ($signals.PolicyHits -ge 2 -or $signals.RetryEvents -ge 3) {
+    $result = New-RcaResult -Category "Policy/throttling pressure" -Confidence 0.73 -Reason "Policy hits and retry events indicate control-plane pressure." -Diagnostics @(
+      "Inspect anti-spam/transport policy hit counters",
+      "Check automation concurrency and backoff behavior",
+      "Audit connector and sender reputation context"
+    ) -NextSteps @(
+      "Apply scoped policy tuning with safety limits",
+      "Introduce exponential backoff + jitter for automation",
+      "Re-run triage after 1 hour to verify stability"
+    )
+  }
+  else {
+    $result = New-RcaResult -Category "Mixed/low-signal" -Confidence 0.58 -Reason "No dominant root cause from provided signals." -Diagnostics @(
+      "Collect longer time window",
+      "Increase sample size and include control messages",
+      "Cross-check client-vs-server behavior"
+    ) -NextSteps @(
+      "Run targeted test matrix (one variable at a time)",
+      "Capture before/after evidence per change",
+      "Promote the first stable path as baseline"
+    )
+  }
+
+  if ($AsJson) { $result | ConvertTo-Json -Depth 6 } else { $result | Format-List }
+}
+catch {
+  Write-Error "RCA engine failed: $($_.Exception.Message)"
+  exit 1
+}

@@ -1,21 +1,42 @@
 # exo-transport-rule-conflict-analyzer
 
-Transport rule overlap/conflict detector with deterministic remediation order.
+Professional RCA tool focused on **transport rule overlap/conflict detection**.
 
-## Engine Logic
-1. Ingest diagnostic results.
-2. Classify dominant root-cause bucket.
-3. Return **next step** actions (not raw data only).
+## Why this project
+This engine converts diagnostic outputs into:
+1) root-cause classification,
+2) confidence score,
+3) direct **next-step resolution actions**.
+
+## Signal model
+Expected signal keys (JSON input):
+- RuleConflicts, PolicyHits, RetryEvents
+- Optional: any missing key defaults safely to `0`.
+
+## Logic contract
+- Not just reporting raw data.
+- Always returns actionable `NextSteps` tailored to dominant cause bucket.
+- Handles low-signal scenarios with controlled re-test strategy.
 
 ## Usage
 ```powershell
 ./powershell/rca-engine.ps1 -InputPath ./sample-signals.json -AsJson
 ```
 
-## Output Contract
-- Category
-- Confidence
-- Reason
-- Diagnostics
-- NextSteps
-- AffectedUser / AffectedUserEmail (example placeholders)
+## Output schema
+- `Category`
+- `Confidence`
+- `Reason`
+- `Diagnostics[]`
+- `NextSteps[]`
+- `AffectedUser`, `AffectedUserEmail` (example placeholders)
+
+## Hardening improvements
+- Threshold-based classification branches
+- Defensive input parsing and file validation
+- Explicit error handling and non-zero exit on failure
+
+## Next roadmap
+- Add live Exchange Online cmdlet ingestion mode.
+- Add HTML report mode for incident handoff.
+- Add Pester tests for branch correctness.
