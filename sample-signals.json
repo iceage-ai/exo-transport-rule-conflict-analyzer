@@ -1,0 +1,8 @@
+{
+  "MicrosoftDelayPct": 70,
+  "ExternalDelayPct": 20,
+  "PolicyHits": 1,
+  "RetryEvents": 2,
+  "AuthFailures": 0,
+  "RuleConflicts": 0
+}
