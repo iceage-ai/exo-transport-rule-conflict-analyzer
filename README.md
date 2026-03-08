@@ -40,3 +40,23 @@ Expected signal keys (JSON input):
 - Add live Exchange Online cmdlet ingestion mode.
 - Add HTML report mode for incident handoff.
 - Add Pester tests for branch correctness.
+
+## SEO & AI Search Keywords
+**Primary search title:** Exchange Online Transport Rule Conflict Analyzer
+
+**Target keywords:**
+- exchange transport rule conflict
+- mail flow rule priority
+- exchange online rule overlap
+- microsoft 365 transport rules troubleshooting
+
+**High-intent AI search questions:**
+- How to detect conflicting transport rules?
+- Why mail flow rules cause side effects?
+- How to fix rule precedence safely?
+
+**On-page SEO notes:**
+- Keep issue-first headings (problem -> diagnosis -> next step).
+- Include command examples with realistic placeholders only.
+- Repeat key terms naturally in H1/H2, intro, and troubleshooting sections.
+- Add incident outcome language: root cause, remediation, validation, prevention.
